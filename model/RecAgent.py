@@ -2,7 +2,6 @@ from langgraph.checkpoint.memory import MemorySaver
 from typing import List
 from langgraph.prebuilt import create_react_agent
 import json
-from tools import extract_json
 import re
 import json
 
@@ -55,6 +54,7 @@ class RecAgent:
         self.msgs=[{"role":"system","content":SYSTEM_PROMPT.format(item_type)}] 
     
     def run(self,is_print=False):
+        print(self.msgs)
         resp=self.model.invoke({"messages":self.msgs},config=self.config)
 
         if is_print:
@@ -68,7 +68,7 @@ class RecAgent:
             explain=ans["explain"]
         except Exception as e:
             raise e
-        
+        self.msgs=[]
         return ans
 
     def forward(self,history_lst:str,candidate_lst:str,predicted:str)->tuple[int,str]:
@@ -81,7 +81,7 @@ class RecAgent:
         self.msgs.append({"role":"user","content":RETRY_PROMPT.format(feed_back)})
         ans=self.run()
 
-        return ans
+        return ans['rec_id'],ans['explain']
 
 
 

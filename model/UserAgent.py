@@ -72,7 +72,7 @@ class UserAgent:
             rec_id = ans["act"]
             explain = ans["explain"]
         except Exception as e:
-            raise e
+            pass
         self.msgs=[]
 
         return ans
