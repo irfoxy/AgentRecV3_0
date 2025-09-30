@@ -3,6 +3,8 @@ from typing import List
 from langgraph.prebuilt import create_react_agent
 import json
 from tools import extract_json
+import re
+import json
 
 SYSTEM_PROMPT="""
 You are an expert in {} recommendation.
@@ -31,7 +33,17 @@ The reasons are as follows:
 Based on the above information, analyze again and make a new recommendation.
 """
 
+def extract_json(text: str) -> dict:
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if not match:
+        raise ValueError("JSON NOT FOUND")
     
+    json_str = match.group(0).strip()
+    
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"JSON ERROR: {e}")
 
 class RecAgent:
     def __init__(self,model,thread_id:str,tools:List,item_type:str):

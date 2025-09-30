@@ -1,7 +1,8 @@
 from langgraph.checkpoint.memory import MemorySaver
 from typing import List
 from langgraph.prebuilt import create_react_agent
-from tools import extract_json
+import re
+import json
 
 SYSTEM_PROMPT = """
 You are a user simulation Agent.
@@ -25,17 +26,30 @@ Potentially applicable user profile:
 """
 
 POS_PROMPT = """
-
+Great! You have correctly simulated the user’s behavior and provided a reasonable explanation.
 """
 
-NEG_PROMPT="""
-
+NEG_PROMPT = """
+The user actually behaved in the opposite way to your prediction, which indicates that your understanding of the user's interests has some bias or omissions. 
+You should adjust your understanding of the user based on this feedback, and then make another prediction and explanation.
 """
+
+
+def extract_json(text: str) -> dict:
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not match:
+        raise ValueError("JSON NOT FOUND")
+
+    json_str = match.group(0).strip()
+
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"JSON ERROR: {e}")
+
 
 class UserAgent:
-    def __init__(
-        self, model, thread_id: str, tools: List, user_profile: str
-    ):
+    def __init__(self, model, thread_id: str, tools: List, user_profile: str):
         self.memory = MemorySaver()
         self.config = {"configurable": {"thread_id": thread_id}}
 
@@ -43,9 +57,7 @@ class UserAgent:
             model=model, tools=tools, checkpointer=self.memory
         )
 
-        self.msgs = [
-            {"role": "system", "content": SYSTEM_PROMPT.format(user_profile)}
-        ]
+        self.msgs = [{"role": "system", "content": SYSTEM_PROMPT.format(user_profile)}]
 
     def run(self, is_print=False):
         resp = self.model.invoke({"messages": self.msgs}, config=self.config)
@@ -61,25 +73,24 @@ class UserAgent:
             explain = ans["explain"]
         except Exception as e:
             raise e
+        self.msgs=[]
 
         return ans
 
-    def forward(self, item_desc: str) -> tuple[int, str]:
+    def forward(self, item_desc: str, user_desc: str) -> tuple[int, str]:
         self.msgs.append(
             {
                 "role": "user",
-                "content": FORWARD_PROMPT.format(item_desc),
+                "content": FORWARD_PROMPT.format(item_desc, user_desc),
             }
         )
         ans = self.run()
 
-        return ans['act'],ans['explain']
-    
-    def backward(self,feedback:bool):
-        msg=POS_PROMPT if feedback else NEG_PROMPT
+        return ans["act"], ans["explain"]
 
-        self.msgs.append(
-            {"role":"user","content":msg}
-        )
+    def backward(self, feedback: bool):
+        msg = POS_PROMPT if feedback else NEG_PROMPT
+
+        self.msgs.append({"role": "user", "content": msg})
 
         self.run()
