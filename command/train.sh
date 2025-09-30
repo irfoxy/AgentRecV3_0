@@ -1,0 +1,11 @@
+python ../train.py \
+  --data_dir ../data/ml100k/processed \
+  --save_dir ../model/saved \
+  --epochs 20 \
+  --batch_size 128 \
+  --maxlen 200 \
+  --hidden_units 64 \
+  --num_blocks 2 \
+  --num_heads 2 \
+  --dropout_rate 0.2 \
+  --norm_first
